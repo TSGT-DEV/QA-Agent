@@ -1,0 +1,4 @@
+Traceback (most recent call last):
+  File "C:\Projects\QA-Agent\src\qa_agent\main.py", line 12, in <module>
+    from src.qa_agent.ui import launch_ui
+ModuleNotFoundError: No module named 'src'

@@ -1,5 +1,6 @@
 from typing import Optional
 import gradio as gr
+from pathlib import Path
 
 def process_file_and_question(file: Optional[str], question: str) -> str:
     """
@@ -9,12 +10,46 @@ def process_file_and_question(file: Optional[str], question: str) -> str:
     if file is None:
         return "Please upload a file first."
     
+    # Get file extension to determine file type
+    file_path = Path(file)
+    file_extension = file_path.suffix.lower()
+    
+    try:
+        # Read file content based on type
+        if file_extension == '.txt':
+            with open(file_path, 'r', encoding='utf-8') as f:
+                content = f.read()
+        elif file_extension == '.pdf':
+            import PyPDF2
+            with open(file_path, 'rb') as f:
+                reader = PyPDF2.PdfReader(f)
+                content = ""
+                for page in reader.pages:
+                    content += page.extract_text() + "\n"
+        elif file_extension in ['.docx', '.doc']:
+            import docx
+            doc = docx.Document(str(file_path))
+            content = ""
+            for para in doc.paragraphs:
+                content += para.text + "\n"
+        else:
+            content = f"Unsupported file type: {file_extension}\nSupported types: .txt, .pdf, .docx, .doc"
+    except ImportError as e:
+        if 'PyPDF2' in str(e):
+            content = "PyPDF2 is not installed. Please install it to read PDF files."
+        elif 'docx' in str(e):
+            content = "python-docx is not installed. Please install it to read DOC/DOCX files."
+        else:
+            content = f"Missing dependency: {str(e)}"
+    except Exception as e:
+        content = f"Error reading file: {str(e)}"
+    
     # For now, just return file info and question if provided
-    file_info = f"Uploaded file: {file}"
+    file_info = f"Uploaded file: {file_path.name}"
     if question and question.strip():
-        return f"{file_info}\nQuestion: {question}\nAnswer: [Placeholder - Backend logic to be implemented]"
+        return f"{file_info}\n\nFile Content:\n{'-'*50}\n{content}\n{'-'*50}\n\nQuestion: {question}\nAnswer: [Placeholder - Backend logic to be implemented]"
     else:
-        return f"{file_info}\nNo question provided. Please ask a question about the file."
+        return f"{file_info}\n\nFile Content:\n{'-'*50}\n{content}\n{'-'*50}\n\nNo question provided. Please ask a question about the file."
 
 def create_ui():
     """

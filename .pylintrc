@@ -1,0 +1,18 @@
+[MASTER]
+# Set the maximum line length
+max-line-length=120
+
+# Disable specific messages that we are willing to ignore
+disable=
+    missing-module-docstring,
+    missing-function-docstring,
+    missing-final-newline,
+    line-too-long,
+    trailing-whitespace,
+    mixed-line-endings,
+    broad-exception-caught,
+    logging-fstring-interpolation,
+    import-outside-toplevel,
+    wrong-import-order,
+    too-many-locals,
+    too-many-branches

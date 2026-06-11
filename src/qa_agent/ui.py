@@ -3,20 +3,23 @@ import gradio as gr
 from pathlib import Path
 from .llm import get_llm, generate_answer
 
-def process_file_and_question(file: Optional[str], question: str) -> str:
+def process_file_and_question(
+    file: Optional[str],
+    question: str,
+    output_format: str,
+    schema: str
+):
     """
     Process uploaded file and question.
     If a question is provided, uses LLM to generate an answer based on file content.
     """
     if file is None:
-        return "Please upload a file first."
+        return "No file uploaded", "Please upload a file first."
     
-    # Get file extension to determine file type
     file_path = Path(file)
     file_extension = file_path.suffix.lower()
     
     try:
-        # Read file content based on type
         if file_extension == '.txt':
             with open(file_path, 'r', encoding='utf-8') as f:
                 content = f.read()
@@ -45,17 +48,18 @@ def process_file_and_question(file: Optional[str], question: str) -> str:
     except Exception as e:
         content = f"Error reading file: {str(e)}"
     
-    # If no question, return file info and content
-    if not question or not question.strip():
-        file_info = f"Uploaded file: {file_path.name}"
-        return f"{file_info}\n\nFile Content:\n{'-'*50}\n{content}\n{'-'*50}\n\nNo question provided. Please ask a question about the file."
-    
-    # If there's a question, use LLM to generate answer
     file_info = f"Uploaded file: {file_path.name}"
-    llm = get_llm()
-    answer = generate_answer(llm, content, question)
+    context_display = f"{file_info}\n\n{'-'*50}\n{content}\n{'-'*50}"
     
-    return f"{file_info}\n\nFile Content:\n{'-'*50}\n{content}\n{'-'*50}\n\nQuestion: {question}\nAnswer: {answer}"
+    if not question or not question.strip():
+        return context_display, "No question provided. Please ask a question about the file."
+    
+    llm = get_llm()
+    schema_value = schema.strip() if schema and schema.strip() else None
+    answer = generate_answer(llm, content, question, output_format, schema_value)
+    
+    result = f"Question: {question}\n\nAnswer:\n{answer}"
+    return context_display, result
 
 def create_ui():
     """
@@ -72,6 +76,16 @@ def create_ui():
                     file_types=[".pdf", ".docx", ".doc", ".txt"],
                     type="filepath"
                 )
+                output_format: gr.Radio = gr.Radio(
+                    choices=["plain", "json", "xml"],
+                    value="plain",
+                    label="Output Format"
+                )
+                schema_input: gr.Textbox = gr.Textbox(
+                    label="Output Schema (Optional)",
+                    placeholder="Enter JSON schema or XML structure definition...",
+                    lines=2
+                )
                 question_input: gr.Textbox = gr.Textbox(
                     label="Ask a Question (Optional)",
                     placeholder="Enter your question about the uploaded file...",
@@ -80,30 +94,26 @@ def create_ui():
                 submit_btn: gr.Button = gr.Button("Submit", variant="primary")
             
             with gr.Column():
+                context_box: gr.Textbox = gr.Textbox(
+                    label="Context (File Content)",
+                    lines=10,
+                    max_lines=20,
+                    interactive=False
+                )
+            
+            with gr.Column():
                 output_box: gr.Textbox = gr.Textbox(
-                    label="Answer",
+                    label="Question & Answer",
                     lines=10,
                     max_lines=20
                 )
-                 
-        # Set up event handling
-        # pylint: disable=no-member
+                  
         submit_btn.click(
             fn=process_file_and_question,
-            inputs=[file_input, question_input],
-            outputs=output_box
+            inputs=[file_input, question_input, output_format, schema_input],
+            outputs=[context_box, output_box]
         )
-        # pylint: enable=no-member
-   
-        # Also allow submitting with Enter key in question box
-        # pylint: disable=no-member
-        question_input.submit(
-            fn=process_file_and_question,
-            inputs=[file_input, question_input],
-            outputs=output_box
-        )
-        # pylint: enable=no-member
-   
+         
     return demo
 
 def launch_ui() -> None:

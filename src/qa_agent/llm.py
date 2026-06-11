@@ -21,28 +21,46 @@ def get_llm(model_name: str = "llama3.2:1b") -> Optional[OllamaLLM]:
         logger.error(f"Failed to initialize Ollama model {model_name}: {e}")
         return None
 
-def generate_answer(llm: Optional[OllamaLLM], context: str, question: str) -> str:
+def generate_answer(
+    llm: Optional[OllamaLLM],
+    context: str,
+    question: str,
+    output_format: str = "plain",
+    schema: Optional[str] = None
+) -> str:
     """
     Generate an answer to the question based on the provided context using the LLM.
+    
+    Args:
+        llm: The language model to use
+        context: The context document content
+        question: The question to answer
+        output_format: Output format - "plain", "json", or "xml"
+        schema: Optional schema definition for structured output (JSON schema for JSON format, or XML structure for XML format)
     """
     if llm is None:
         return "Error: LLM is not available. Please ensure Ollama is running and the model 'llama3.2:1b' is available."
     
-    # Create a prompt template
-    template = """Based on the following context, answer the question. If the answer cannot be found in the context, say so.
+    format_instruction = ""
+    if output_format == "json":
+        format_instruction = f"\nReturn the answer as a valid JSON object. Schema: {schema if schema else 'unstructured JSON'}."
+    elif output_format == "xml":
+        format_instruction = f"\nReturn the answer as valid XML. Structure: {schema if schema else 'unstructured XML'}."
+    
+    template = f"""Based on the following context, answer the question. If the answer cannot be found in the context, say so.{format_instruction}
 
 Context:
-{context}
+{{context}}
 
 Question:
-{question}
+{{question}}
 
 Answer:"""
     
     prompt = PromptTemplate.from_template(template)
     
     # Create a chain: format the prompt with context and question, then pass to LLM
-    chain: RunnableSerializable[dict[str, str], str] = ( # type: ignore
+    chain: RunnableSerializable[dict[str, str], str] = ( #type: ignore
         {"context": RunnablePassthrough(), "question": RunnablePassthrough()}
         | prompt
         | llm

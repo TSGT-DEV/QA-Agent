@@ -1,11 +1,12 @@
 from typing import Optional
 import gradio as gr
 from pathlib import Path
+from .llm import get_llm, generate_answer
 
 def process_file_and_question(file: Optional[str], question: str) -> str:
     """
-    Placeholder function for processing uploaded file and question.
-    This will be replaced with actual backend logic later.
+    Process uploaded file and question.
+    If a question is provided, uses LLM to generate an answer based on file content.
     """
     if file is None:
         return "Please upload a file first."
@@ -44,12 +45,17 @@ def process_file_and_question(file: Optional[str], question: str) -> str:
     except Exception as e:
         content = f"Error reading file: {str(e)}"
     
-    # For now, just return file info and question if provided
-    file_info = f"Uploaded file: {file_path.name}"
-    if question and question.strip():
-        return f"{file_info}\n\nFile Content:\n{'-'*50}\n{content}\n{'-'*50}\n\nQuestion: {question}\nAnswer: [Placeholder - Backend logic to be implemented]"
-    else:
+    # If no question, return file info and content
+    if not question or not question.strip():
+        file_info = f"Uploaded file: {file_path.name}"
         return f"{file_info}\n\nFile Content:\n{'-'*50}\n{content}\n{'-'*50}\n\nNo question provided. Please ask a question about the file."
+    
+    # If there's a question, use LLM to generate answer
+    file_info = f"Uploaded file: {file_path.name}"
+    llm = get_llm()
+    answer = generate_answer(llm, content, question)
+    
+    return f"{file_info}\n\nFile Content:\n{'-'*50}\n{content}\n{'-'*50}\n\nQuestion: {question}\nAnswer: {answer}"
 
 def create_ui():
     """
@@ -79,7 +85,7 @@ def create_ui():
                     lines=10,
                     max_lines=20
                 )
-                
+                 
         # Set up event handling
         # pylint: disable=no-member
         submit_btn.click(
@@ -88,10 +94,19 @@ def create_ui():
             outputs=output_box
         )
         # pylint: enable=no-member
-  
+   
+        # Also allow submitting with Enter key in question box
+        # pylint: disable=no-member
+        question_input.submit(
+            fn=process_file_and_question,
+            inputs=[file_input, question_input],
+            outputs=output_box
+        )
+        # pylint: enable=no-member
+   
     return demo
 
-def launch_ui():
+def launch_ui() -> None:
     """
     Launches the Gradio UI.
     """

@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Any, Optional
 import gradio as gr
 from pathlib import Path
 from .llm import get_llm, generate_answer
@@ -77,21 +77,23 @@ def create_ui():
                     type="filepath"
                 )
                 output_format: gr.Radio = gr.Radio(
-                    choices=["plain", "json", "xml"],
-                    value="plain",
+                    choices=["text", "json"],
+                    value="json",
                     label="Output Format"
                 )
                 schema_input: gr.Textbox = gr.Textbox(
                     label="Output Schema (Optional)",
-                    placeholder="Enter JSON schema or XML structure definition...",
-                    lines=2
+                    placeholder="""Enter JSON schema. Schema format: {"field_name": {"type": "string"}} where type can be string, integer, number, or boolean""",
+                    lines=2,
+                    value="""{"field_name": {"type": "string"}}"""
                 )
                 question_input: gr.Textbox = gr.Textbox(
                     label="Ask a Question (Optional)",
                     placeholder="Enter your question about the uploaded file...",
-                    lines=2
+                    lines=2,
+                    value="List all equipments"
                 )
-                submit_btn: gr.Button = gr.Button("Submit", variant="primary")
+                submit_btn: Any = gr.Button("Submit", variant="primary")
             
             with gr.Column():
                 context_box: gr.Textbox = gr.Textbox(
@@ -108,12 +110,12 @@ def create_ui():
                     max_lines=20
                 )
                   
-        submit_btn.click(
+        getattr(submit_btn, "click")(
             fn=process_file_and_question,
             inputs=[file_input, question_input, output_format, schema_input],
             outputs=[context_box, output_box]
         )
-         
+
     return demo
 
 def launch_ui() -> None:

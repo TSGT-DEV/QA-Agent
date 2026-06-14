@@ -113,7 +113,7 @@ def generate_answer(
     llm: Optional[ChatOllama],
     context: str,
     question: str,
-    output_format: str = "plain",
+    output_format: str = "text",
     schema: Optional[str] = None,
 ) -> str:
     """
@@ -123,7 +123,7 @@ def generate_answer(
         llm: The language model to use
         context: The context document content
         question: The question to answer
-        output_format: Output format - "plain", "json", or "xml"
+        output_format: Output format - "text", "json"
         schema: Optional schema definition for structured output (JSON schema for JSON format)
     """
     if llm is None:
@@ -143,7 +143,7 @@ Answer:"""
 
     prompt = PromptTemplate.from_template(template)
     formatted_output = output_format.lower().strip()
-
+    print(formatted_output)
     try:
         if formatted_output == "json":
             response_model = create_response_model_from_schema(schema)
@@ -163,7 +163,7 @@ Answer:"""
             return str(answer).strip()
 
        
-        plain_chain: Any = cast(
+        text_chain: Any = cast(
             Any,
             {
                 "context": RunnablePassthrough(),
@@ -173,7 +173,7 @@ Answer:"""
             | llm
             | StrOutputParser(),
         )
-        answer = plain_chain.invoke({"context": context, "question": question})
+        answer = text_chain.invoke({"context": context, "question": question})
         return str(answer).strip()
     except Exception as e:
         logger.error(f"Error generating answer: {e}")
